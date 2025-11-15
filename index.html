@@ -2,303 +2,303 @@
 <html lang="ku">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>FLKRDSTUDIO AI Assistant</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zana - AI Assistant</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --system-blue: #007aff;
-            --system-gray-1: #f2f2f7; /* Primary background */
-            --system-gray-2: #ffffff; /* Grouped component background */
-            --system-gray-3: #c7c7cc; /* Borders, separators */
-            --system-gray-4: #e5e5ea; /* AI chat bubble */
-            --label-primary: #000000;
-            --label-secondary: #8e8e93;
+            --background-dark: #131314;
+            --surface-dark: #1E1F20;
+            --primary-accent-start: #4F46E5;
+            --primary-accent-end: #A855F7;
+            --text-primary: #E2E2E3;
+            --text-secondary: #949596;
+            --border-color: #333435;
         }
-        html, body {
-            height: 100%;
-            overflow: hidden;
+        html {
+            scroll-behavior: smooth;
         }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
-            background-color: var(--system-gray-1);
-            color: var(--label-primary);
-            overscroll-behavior: none;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background-dark);
+            color: var(--text-primary);
         }
-        #app-container {
-            -webkit-overflow-scrolling: touch;
+        .sidebar-gradient {
+            background-color: var(--surface-dark);
         }
-        #app-content {
-            position: relative;
+        .chat-input-glow {
+            border-color: var(--border-color);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
         }
-        .app-view {
-            display: none; /* Hidden by default */
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            transition: transform 0.35s cubic-bezier(0.4, 0.0, 0.2, 1);
-            will-change: transform;
-            flex-direction: column;
+        .chat-input-glow:focus-within {
+            border-color: var(--primary-accent-start);
+            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.4);
         }
-        .app-view.active {
-            display: flex; /* Active view is visible */
+        .shimmer-gradient {
+            background: linear-gradient(90deg, var(--primary-accent-start), var(--primary-accent-end), var(--primary-accent-start));
+            background-size: 200% 100%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 5s linear infinite;
         }
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--surface-dark); }
+        ::-webkit-scrollbar-thumb { background: #4a4a4f; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #5a5a60; }
 
-        /* Slide Animations */
-        @keyframes slide-in-right {
-            from { transform: translateX(100%); }
-            to { transform: translateX(0); }
+        /* On-scroll animations */
+        .animate-on-scroll {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
         }
-        @keyframes slide-out-left {
-            from { transform: translateX(0); }
-            to { transform: translateX(-100%); }
+        .animate-on-scroll.is-visible {
+            opacity: 1;
+            transform: translateY(0);
         }
-        .slide-in-right { animation: slide-in-right 0.35s cubic-bezier(0.4, 0.0, 0.2, 1) forwards; }
-        .slide-out-left { animation: slide-out-left 0.35s cubic-bezier(0.4, 0.0, 0.2, 1) forwards; }
-
-        .tab-button.active { color: var(--system-blue); }
-
-        /* Inset Grouped List Style */
-        .list-inset-grouped {
-            margin: 1rem;
-            border-radius: 0.75rem;
-            background-color: var(--system-gray-2);
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-            overflow: hidden;
+        /* Typing indicator */
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--text-secondary);
+            animation: bounce 1.3s infinite;
         }
-        .list-inset-grouped li {
-            padding: 0.85rem 1rem;
-            border-bottom: 1px solid var(--system-gray-3);
-            font-size: 1.05rem;
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
         }
-        .list-inset-grouped li:last-child { border-bottom: none; }
-        
-        /* Custom scrollbar for chat */
-        #chat-messages::-webkit-scrollbar { display: none; }
-        #chat-messages { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="flex justify-center items-center bg-black">
+<body class="h-screen w-screen overflow-hidden flex">
 
-    <div id="app-container" class="w-full max-w-md h-full flex flex-col bg-[var(--system-gray-1)] shadow-2xl overflow-hidden">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-64 bg-surface-dark flex-shrink-0 flex flex-col p-4 transition-transform duration-300 ease-in-out md:translate-x-0 -translate-x-full absolute md:static z-20 h-full">
+        <div class="flex items-center justify-between mb-6">
+             <div class="flex items-center gap-3">
+                 <div class="w-10 h-10 flex items-center justify-center bg-gradient-to-br from-purple-600 to-indigo-600 rounded-lg">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                 </div>
+                 <span class="text-lg font-bold text-white">Rawand AI</span>
+             </div>
+        </div>
         
-        <header id="app-header" class="flex items-center justify-center p-3 bg-[var(--system-gray-1)]/80 backdrop-blur-md border-b border-[var(--system-gray-3)] flex-shrink-0 z-10">
-            <h1 id="header-title" class="text-lg font-semibold text-center mx-auto">پرسیار</h1>
+        <button class="w-full text-left bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center gap-3 transition-colors duration-200">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+            گفتوگۆی نوێ
+        </button>
+
+        <div class="mt-8 flex-grow overflow-y-auto">
+            <h3 class="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">مێژوو</h3>
+            <nav class="space-y-1">
+                <a href="#" class="block text-sm text-text-primary hover:bg-white/10 p-2 rounded-md truncate">پرسیار لەسەر دیزاینی UI/UX</a>
+                <a href="#" class="block text-sm text-text-primary hover:bg-white/10 p-2 rounded-md truncate">وەرگێڕانی دەق بۆ ئینگلیزی</a>
+            </nav>
+        </div>
+
+        <div class="flex-shrink-0 border-t border-border-color pt-4 text-xs text-text-secondary">
+             <p>&copy; 2025 - 2030 Zana by Rawand AI</p>
+             <div class="flex space-x-2 mt-2">
+                 <a href="#" class="hover:text-text-primary">پاراستنی زانیاری</a>
+                 <span>&middot;</span>
+                 <a href="#" class="hover:text-text-primary">بەکارهێنان</a>
+             </div>
+        </div>
+    </aside>
+
+    <!-- Main Chat Area -->
+    <main class="flex-1 flex flex-col h-screen bg-background-dark">
+        <!-- Header for mobile -->
+        <header class="md:hidden flex items-center justify-between p-4 border-b border-border-color">
+            <button id="menu-toggle" class="p-2">
+                <svg class="w-6 h-6 text-text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+            </button>
+            <h1 class="text-lg font-bold text-white">Zana AI</h1>
+            <div></div> <!-- Spacer -->
         </header>
 
-        <main id="app-content" class="flex-1 overflow-hidden relative">
-            
-            <!-- Chat View -->
-            <div id="chat-view" class="app-view active">
-                <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4">
-                    <!-- Messages will be dynamically inserted here -->
-                </div>
-                <div id="typing-indicator" class="hidden p-4 flex items-center space-x-2">
-                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style="animation-delay: 0s;"></div>
-                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style="animation-delay: 0.2s;"></div>
-                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style="animation-delay: 0.4s;"></div>
-                </div>
-                <div class="p-2 border-t border-[var(--system-gray-3)] bg-[var(--system-gray-1)]">
-                    <form id="message-form" class="flex items-center space-x-2">
-                        <input id="message-input" type="text" placeholder="پرسیارەکەت بنووسە..." class="flex-1 p-2.5 bg-[var(--system-gray-2)] border border-[var(--system-gray-3)] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--system-blue)] text-base" autocomplete="off">
-                        <button type="submit" class="p-2 text-[var(--system-blue)] font-semibold">ناردن</button>
-                    </form>
+        <div id="chat-container" class="flex-1 overflow-y-auto p-6">
+            <!-- Welcome Screen -->
+            <div id="welcome-screen" class="flex flex-col items-center justify-center h-full text-center">
+                <h1 class="text-5xl md:text-6xl font-bold shimmer-gradient animate-on-scroll">Zana</h1>
+                <p id="welcome-message" class="mt-4 text-xl text-text-secondary animate-on-scroll" style="transition-delay: 200ms;"></p>
+                
+                <div class="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 w-full max-w-4xl">
+                    <div class="bg-surface-dark p-4 rounded-lg border border-border-color hover:border-primary-accent-start transition-colors animate-on-scroll" style="transition-delay: 400ms;">
+                        <h3 class="font-semibold">ستاندەر</h3>
+                        <p class="text-sm text-text-secondary">هاوسەنگ و یارمەتیدەر</p>
+                    </div>
+                    <div class="bg-surface-dark p-4 rounded-lg border border-border-color hover:border-primary-accent-start transition-colors animate-on-scroll" style="transition-delay: 500ms;">
+                        <h3 class="font-semibold">خێرا</h3>
+                        <p class="text-sm text-text-secondary">وەڵامی خێرا و پوخت</p>
+                    </div>
+                     <div class="bg-surface-dark p-4 rounded-lg border border-border-color hover:border-primary-accent-start transition-colors animate-on-scroll" style="transition-delay: 600ms;">
+                        <h3 class="font-semibold">بیری قووڵ</h3>
+                        <p class="text-sm text-text-secondary">ئیستدلالکردنی پێشکەوتوو</p>
+                    </div>
+                    <div class="bg-surface-dark p-4 rounded-lg border border-border-color hover:border-primary-accent-start transition-colors animate-on-scroll" style="transition-delay: 700ms;">
+                        <h3 class="font-semibold">توێژینەوە</h3>
+                        <p class="text-sm text-text-secondary">وەڵامی نوێ و ئاماژەپێکراو</p>
+                    </div>
+                    <div class="bg-surface-dark p-4 rounded-lg border border-border-color hover:border-primary-accent-start transition-colors animate-on-scroll" style="transition-delay: 800ms;">
+                        <h3 class="font-semibold">نەخشەکان</h3>
+                        <p class="text-sm text-text-secondary">زانیاری لەسەر بنەمای شوێن</p>
+                    </div>
                 </div>
             </div>
-
-            <!-- History View -->
-            <div id="history-view" class="app-view overflow-y-auto">
-                 <div id="history-list-container">
-                    <!-- History list will be rendered here -->
-                 </div>
-            </div>
             
-        </main>
+            <!-- Chat messages will be appended here -->
 
-        <nav id="app-tab-bar" class="flex justify-around items-center py-2 bg-[var(--system-gray-1)]/80 backdrop-blur-md border-t border-[var(--system-gray-3)] flex-shrink-0">
-             <button data-view="chat-view" data-title="پرسیار" class="tab-button active flex flex-col items-center p-2 transition-colors w-20">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-                <span class="text-xs mt-1">پرسیار</span>
-            </button>
-            <button data-view="history-view" data-title="مێژوو" class="tab-button flex flex-col items-center text-[var(--label-secondary)] p-2 transition-colors w-20">
-                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                <span class="text-xs mt-1">مێژوو</span>
-            </button>
-        </nav>
-    </div>
+        </div>
+
+        <!-- Chat Input Form -->
+        <div class="p-4 md:p-6 w-full max-w-4xl mx-auto">
+            <form id="chat-form" class="bg-surface-dark rounded-xl p-2 flex items-center gap-2 chat-input-glow">
+                <button type="button" class="p-2 text-text-secondary hover:text-text-primary transition-colors" aria-label="Upload Image">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                </button>
+                <button type="button" class="p-2 text-text-secondary hover:text-text-primary transition-colors" aria-label="Use Microphone">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                </button>
+                <input type="text" id="message-input" placeholder="پرسیارێکت بنووسە..." class="w-full bg-transparent focus:outline-none text-text-primary" autocomplete="off">
+                <button type="submit" class="bg-indigo-600 p-2 rounded-lg text-white hover:bg-indigo-500 transition-colors disabled:bg-gray-500" aria-label="Send Message">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                </button>
+            </form>
+             <div class="text-center text-xs text-text-secondary mt-2">
+                زمان: <a href="#" class="hover:text-text-primary">کوردی سۆرانی</a> - <a href="#" class="hover:text-text-primary">کوردی بادینی</a> - <a href="#" class="hover:text-text-primary">ئینگلیزی</a> | دۆخ: <a href="#" class="hover:text-text-primary">ڕووناک</a> - <a href="#" class="hover:text-text-primary">تاریک</a>
+            </div>
+        </div>
+    </main>
 
     <script>
-        // --- DOM Elements ---
-        const headerTitle = document.getElementById('header-title');
-        const tabButtons = document.querySelectorAll('.tab-button');
-        const views = document.querySelectorAll('.app-view');
-        const chatMessagesContainer = document.getElementById('chat-messages');
-        const messageForm = document.getElementById('message-form');
-        const messageInput = document.getElementById('message-input');
-        const typingIndicator = document.getElementById('typing-indicator');
-        const historyListContainer = document.getElementById('history-list-container');
+        document.addEventListener('DOMContentLoaded', () => {
+            const chatForm = document.getElementById('chat-form');
+            const messageInput = document.getElementById('message-input');
+            const chatContainer = document.getElementById('chat-container');
+            const welcomeScreen = document.getElementById('welcome-screen');
+            const welcomeMessage = document.getElementById('welcome-message');
+            const menuToggle = document.getElementById('menu-toggle');
+            const sidebar = document.getElementById('sidebar');
 
-        // --- App State ---
-        let currentViewId = 'chat-view';
-        const conversationHistory = [];
+            // --- "Wow Factor": Typewriter Effect ---
+            const textToType = "من لەلایەن ڕاوێند ئەی ئای دروستکراوم، چۆن دەتوانم یارمەتیت بدەم؟";
+            let typeIndex = 0;
+            function typewriter() {
+                if (typeIndex < textToType.length) {
+                    welcomeMessage.textContent += textToType.charAt(typeIndex);
+                    typeIndex++;
+                    setTimeout(typewriter, 50);
+                }
+            }
+            
+            // --- On-Scroll Animations ---
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                    }
+                });
+            }, { threshold: 0.1 });
 
-        // --- Core Functions ---
+            document.querySelectorAll('.animate-on-scroll').forEach(el => {
+                observer.observe(el);
+            });
+            
+            // Trigger typewriter after initial animation
+            setTimeout(typewriter, 1000);
 
-        /**
-         * Handles navigation between views with animations.
-         * @param {string} viewId - The ID of the view to navigate to.
-         * @param {string} title - The title to display in the header.
-         */
-        function navigateTo(viewId, title) {
-            if (viewId === currentViewId) return;
+            // --- Mobile Menu Toggle ---
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('-translate-x-full');
+            });
+            
+            // --- Chat Functionality ---
+            chatForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const messageText = messageInput.value.trim();
+                if (messageText) {
+                    appendMessage(messageText, 'user');
+                    messageInput.value = '';
+                    if (welcomeScreen) {
+                        welcomeScreen.style.display = 'none';
+                    }
+                    fakeAiResponse();
+                }
+            });
+            
+            // --- Append Message to DOM ---
+            function appendMessage(text, sender) {
+                const messageWrapper = document.createElement('div');
+                messageWrapper.className = `flex gap-4 mb-6 animate-on-scroll ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
 
-            const currentView = document.getElementById(currentViewId);
-            const nextView = document.getElementById(viewId);
-
-            headerTitle.textContent = title;
-
-            if (currentView && nextView) {
-                // Determine animation direction (basic implementation)
-                const currentIndex = Array.from(tabButtons).findIndex(btn => btn.dataset.view === currentViewId);
-                const nextIndex = Array.from(tabButtons).findIndex(btn => btn.dataset.view === viewId);
-
-                // Simple slide left/right animation logic
-                currentView.classList.add('slide-out-left');
-                nextView.classList.remove('slide-in-right'); // Clear previous animation classes
-                nextView.style.animation = ''; // Reset animation property
+                const avatar = document.createElement('div');
+                avatar.className = `w-8 h-8 rounded-full flex-shrink-0 ${sender === 'user' ? 'bg-blue-500' : 'bg-gradient-to-br from-purple-600 to-indigo-600'} flex items-center justify-center font-bold text-white`;
+                avatar.textContent = sender === 'user' ? 'ت' : 'Z';
                 
-                nextView.classList.add('active');
-                nextView.classList.add('slide-in-right');
+                const messageBubble = document.createElement('div');
+                messageBubble.className = `max-w-md p-3 rounded-lg ${sender === 'user' ? 'bg-indigo-600 text-white' : 'bg-surface-dark text-text-primary'}`;
+                messageBubble.textContent = text;
+                
+                if (sender === 'user') {
+                    messageWrapper.appendChild(messageBubble);
+                    messageWrapper.appendChild(avatar);
+                } else {
+                    messageWrapper.appendChild(avatar);
+                    messageWrapper.appendChild(messageBubble);
+                }
+
+                chatContainer.appendChild(messageWrapper);
+                observer.observe(messageWrapper); // Observe new messages for animation
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+            
+            // --- Fake AI Response Simulation ---
+            function fakeAiResponse() {
+                // Show typing indicator
+                const typingIndicator = document.createElement('div');
+                typingIndicator.id = 'typing-indicator';
+                typingIndicator.className = 'flex gap-4 mb-6 animate-on-scroll justify-start';
+                typingIndicator.innerHTML = `
+                    <div class="w-8 h-8 rounded-full flex-shrink-0 bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center font-bold text-white">Z</div>
+                    <div class="max-w-md p-3 rounded-lg bg-surface-dark flex items-center justify-center space-x-1.5 typing-indicator">
+                        <span></span><span></span><span></span>
+                    </div>`;
+                chatContainer.appendChild(typingIndicator);
+                observer.observe(typingIndicator);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
 
                 setTimeout(() => {
-                    currentView.classList.remove('active');
-                    currentView.classList.remove('slide-out-left');
-                    nextView.classList.remove('slide-in-right');
-                }, 350);
+                    const existingIndicator = document.getElementById('typing-indicator');
+                    if(existingIndicator) {
+                        existingIndicator.remove();
+                    }
+                    const responses = [
+                        "زۆر باشە، من لێرەم بۆ یارمەتیدانت. دەتوانیت پرسیارێکی دیاریکراوم لێبکەیت؟",
+                        "تێگەیشتم. ئایا دەتەوێت زانیاری زیاترت لەسەر ئەم بابەتە پێ بدەم؟",
+                        "ئەمە بابەتێکی سەرنجڕاکێشە. من چەند سەرچاوەیەکی پەیوەندیدارم دۆزیوەتەوە.",
+                    ];
+                    const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                    appendMessage(randomResponse, 'ai');
+                }, 2000);
             }
             
-            currentViewId = viewId;
+            // --- Placeholder alerts for other buttons ---
+            document.querySelector('[aria-label="Upload Image"]').addEventListener('click', () => alert('چالاکی بارکردنی وێنە لە داهاتوودا زیاد دەکرێت.'));
+            document.querySelector('[aria-label="Use Microphone"]').addEventListener('click', () => alert('چالاکی بەکارهێنانی مایکرۆفۆن لە داهاتوودا زیاد دەکرێت.'));
 
-            // Update active tab button
-            tabButtons.forEach(button => {
-                if (button.dataset.view === viewId) {
-                    button.classList.add('active');
-                    button.classList.remove('text-[var(--label-secondary)]');
-                } else {
-                    button.classList.remove('active');
-                    button.classList.add('text-[var(--label-secondary)]');
-                }
-            });
-
-            // Render content for the new view
-            if (viewId === 'history-view') {
-                renderHistory();
-            }
-        }
-
-        /**
-         * Renders the entire chat history in the chat view.
-         */
-        function renderChat() {
-            chatMessagesContainer.innerHTML = ''; // Clear existing messages
-            conversationHistory.forEach(msg => {
-                const bubble = document.createElement('div');
-                bubble.textContent = msg.text;
-                
-                if (msg.sender === 'user') {
-                    bubble.className = 'bg-[var(--system-blue)] text-white p-3 rounded-2xl max-w-[80%] self-end clear-both';
-                } else {
-                    bubble.className = 'bg-[var(--system-gray-4)] p-3 rounded-2xl max-w-[80%] self-start clear-both';
-                }
-                chatMessagesContainer.appendChild(bubble);
-            });
-            // Scroll to the bottom
-            chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
-        }
-        
-        /**
-         * Renders the question history in the history view.
-         */
-        function renderHistory() {
-            historyListContainer.innerHTML = ''; // Clear previous list
-            const userQuestions = conversationHistory.filter(msg => msg.sender === 'user');
-
-            if (userQuestions.length === 0) {
-                historyListContainer.innerHTML = `<p class="text-[var(--label-secondary)] text-center p-8">هیچ پرسیارێک نەکراوە.</p>`;
-                return;
-            }
-
-            const list = document.createElement('ul');
-            list.className = 'list-inset-grouped';
-            
-            userQuestions.forEach(msg => {
-                const listItem = document.createElement('li');
-                listItem.textContent = msg.text;
-                list.appendChild(listItem);
-            });
-
-            historyListContainer.appendChild(list);
-        }
-
-        /**
-         * Simulates an AI response.
-         * @param {string} userQuestion - The question from the user.
-         */
-        function simulateAIResponse(userQuestion) {
-            typingIndicator.classList.remove('hidden');
-            chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
-
-            setTimeout(() => {
-                typingIndicator.classList.add('hidden');
-                
-                // This is a placeholder for a real AI response
-                const aiResponseText = `زۆر سوپاس بۆ پرسیارەکەت. من مۆدێلێکی زیرەکی دەستکردم و هێشتا لە قۆناغی فێربووندام، بەڵام هەوڵ دەدەم باشترین وەڵامت بدەمەوە.`;
-                
-                conversationHistory.push({ sender: 'ai', text: aiResponseText });
-                renderChat();
-            }, 1500); // Simulate network delay
-        }
-
-        // --- Event Listeners ---
-        tabButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const viewId = button.dataset.view;
-                const title = button.dataset.title;
-                if (viewId && title) {
-                    navigateTo(viewId, title);
-                }
-            });
         });
-
-        messageForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const userInput = messageInput.value.trim();
-            if (userInput) {
-                // 1. Add user message to history
-                conversationHistory.push({ sender: 'user', text: userInput });
-                // 2. Re-render the chat UI
-                renderChat();
-                // 3. Clear the input field
-                messageInput.value = '';
-                // 4. Simulate AI response
-                simulateAIResponse(userInput);
-            }
-        });
-
-        // --- Initial Load ---
-        function initializeApp() {
-            conversationHistory.push({
-                sender: 'ai',
-                text: 'سڵاو، من زیرەکی دەستکردی کوردم. چۆن دەتوانم یارمەتیت بدەم؟'
-            });
-            renderChat();
-        }
-
-        initializeApp();
     </script>
 </body>
 </html>
