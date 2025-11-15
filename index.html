@@ -8,6 +8,7 @@
     <style>
         :root {
             --system-blue: #007aff;
+            --system-green: #34c759;
             --system-gray-1: #f2f2f7; /* Primary background */
             --system-gray-2: #ffffff; /* Grouped component background */
             --system-gray-3: #c7c7cc; /* Borders, separators */
@@ -97,6 +98,47 @@
         .list-inset-grouped li:last-child {
             border-bottom: none;
         }
+        
+        /* iOS Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 51px;
+            height: 31px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--system-gray-3);
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 27px;
+            width: 27px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .toggle-slider {
+            background-color: var(--system-green);
+        }
+        input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+        }
 
         /* Chat Styles */
         .chat-bubble {
@@ -159,11 +201,16 @@
             <div id="settings-view" class="app-view hidden">
                 <div class="p-4 pt-6">
                     <ul class="list-inset-grouped">
+                        <li>
+                            <span>قسەکردن چالاک بکە</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="tts-toggle">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </li>
                         <li><span>زمان</span> <span class="text-[var(--label-secondary)]">کوردی (سۆرانی)</span></li>
-                        <li><span>خێرایی دەنگ</span> <span class="text-[var(--label-secondary)]">ئاسایی</span></li>
                     </ul>
                      <ul class="list-inset-grouped">
-                        <li id="tts-button"><span>چالاککردنی دەنگ</span> <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[var(--label-secondary)]" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9 9 0 0119 10a9 9 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7 7 0 0017 10a7 7 0 00-2.343-5.657 1 1 0 010-1.414z" clip-rule="evenodd" /></svg></li>
                         <li><span>دەربارەی Zana AI</span></li>
                     </ul>
                 </div>
@@ -193,20 +240,54 @@
         const headerTitle = document.getElementById('header-title');
         let currentViewId = 'chat-view';
         
-        // --- DATA ---
+        // --- DATA & STATE ---
         const messages = [
             {
                 sender: 'ai',
-                text: 'سڵاو! من زانام. بەڵێ لەلایەن ڕەوەند ئەی ئای دروستکراوم، چۆن دەتوانم یارمەتیت بدەم لە هەموو پرسیارێک؟'
+                text: 'سڵاو! من زانام. چۆن دەتوانم یارمەتیت بدەم؟'
             }
         ];
+        let isTtsEnabled = false;
+        let kurdishVoice = null;
 
         // --- DOM ELEMENTS ---
         const messageForm = document.getElementById('message-form');
         const messageInput = document.getElementById('message-input');
         const messageContainer = document.getElementById('message-container');
         const micButton = document.getElementById('mic-button');
-        const ttsButton = document.getElementById('tts-button');
+        const ttsToggle = document.getElementById('tts-toggle');
+
+        // --- TTS (TEXT-TO-SPEECH) LOGIC ---
+        function loadVoices() {
+            const voices = window.speechSynthesis.getVoices();
+            // BCP 47 language tag for Central Kurdish is 'ckb'
+            // We search for 'ku' for broader compatibility
+            kurdishVoice = voices.find(voice => voice.lang.startsWith('ku') || voice.lang === 'ckb-IQ');
+            if (!kurdishVoice) {
+                console.warn("Kurdish voice not found. TTS might not work as expected.");
+            }
+        }
+        
+        // The voices are loaded asynchronously.
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+        
+        function speak(text) {
+            if (!isTtsEnabled || !text) return;
+            
+            window.speechSynthesis.cancel(); // Stop any currently playing speech
+            
+            const utterance = new SpeechSynthesisUtterance(text); // Create a new speech request.
+            if (kurdishVoice) {
+                utterance.voice = kurdishVoice;
+                utterance.lang = kurdishVoice.lang; // Ensure correct language is set.
+            } else {
+                utterance.lang = 'ku-CKB'; // Fallback language code
+            }
+            utterance.rate = 0.9;
+            utterance.pitch = 1.1;
+            
+            window.speechSynthesis.speak(utterance);
+        }
 
         // --- RENDER FUNCTION ---
         function renderMessages() {
@@ -226,36 +307,33 @@
             messageContainer.scrollTop = messageContainer.scrollHeight;
         }
 
-        // --- STATE UPDATE & EVENT LISTENERS ---
+        // --- EVENT LISTENERS ---
         messageForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const userInput = messageInput.value.trim();
             if (userInput === '') return;
 
-            // 1. Update data array with user message
             messages.push({ sender: 'user', text: userInput });
-            
-            // 2. Re-render the UI
             renderMessages();
-            
-            // 3. Clear the input
             messageInput.value = '';
-
-            // 4. Simulate AI response
             simulateAIResponse(userInput);
         });
         
         micButton.addEventListener('click', () => {
-            alert('Speech-to-text is not implemented in this demo.');
+            alert('Speech-to-text is not yet implemented.');
         });
         
-        ttsButton.addEventListener('click', () => {
-             alert('Text-to-speech is not implemented in this demo.');
+        ttsToggle.addEventListener('change', (e) => {
+            isTtsEnabled = e.target.checked;
+            if (isTtsEnabled && !kurdishVoice) {
+                 alert('ببورە، دەنگی کوردی لەسەر ئامێرەکەت بەردەست نییە. ڕەنگە پێویست بکات لە ڕێکخستنەکانی ئامێرەکەت زیادی بکەیت.');
+            }
+            if (!isTtsEnabled) {
+                window.speechSynthesis.cancel(); // Stop speaking if disabled
+            }
         });
         
         function simulateAIResponse(userInput) {
-            // Add typing indicator if needed
-            
             setTimeout(() => {
                 let aiResponse = "ببورە، وەک مۆدێلێکی زمانەوانی، ناتوانم وەڵامی ئەو پرسیارە بدەمەوە.";
 
@@ -267,13 +345,11 @@
                      aiResponse = "پرسیارێکی سەرنجڕاکێشە. با زیاتر لێی بکۆڵینەوە.";
                 }
 
-                // 1. Update data array with AI message
                 messages.push({ sender: 'ai', text: aiResponse });
-                
-                // 2. Re-render the UI
                 renderMessages();
+                speak(aiResponse);
 
-            }, 1200); // Simulate network delay
+            }, 1000); // Simulate network delay
         }
 
         // --- NAVIGATION LOGIC ---
@@ -282,57 +358,43 @@
 
             const currentView = document.getElementById(currentViewId);
             const nextView = document.getElementById(viewId);
+            headerTitle.textContent = title;
 
-            if (headerTitle) {
-                headerTitle.textContent = title;
-            }
-
-            if (currentView && nextView) {
-                currentView.classList.add('slide-out-left');
-                
-                setTimeout(() => {
-                    currentView.classList.add('hidden');
-                    currentView.classList.remove('slide-out-left');
-
-                    nextView.classList.remove('hidden');
-                    nextView.classList.add('slide-in-right');
-                }, 50); // Small delay to ensure smooth transition
-                
-                setTimeout(() => {
-                    nextView.classList.remove('slide-in-right');
-                }, 400); // Cleanup animation class
-            }
+            currentView.classList.add('slide-out-left');
+            
+            setTimeout(() => {
+                currentView.classList.add('hidden');
+                currentView.classList.remove('slide-out-left');
+                nextView.classList.remove('hidden');
+                nextView.classList.add('slide-in-right');
+            }, 50); 
+            
+            setTimeout(() => {
+                nextView.classList.remove('slide-in-right');
+            }, 400); 
             
             currentViewId = viewId;
 
-            // Update active tab state
             tabButtons.forEach(button => {
-                if (button.dataset.view === viewId) {
-                    button.classList.add('active');
-                    button.classList.remove('text-[var(--label-secondary)]');
-                } else {
-                    button.classList.remove('active');
-                    button.classList.add('text-[var(--label-secondary)]');
-                }
+                const isActive = button.dataset.view === viewId;
+                button.classList.toggle('active', isActive);
+                button.classList.toggle('text-[var(--label-secondary)]', !isActive);
             });
         }
 
         tabButtons.forEach(button => {
             button.addEventListener('click', () => {
-                const viewId = button.dataset.view;
-                const title = button.dataset.title;
-                if(viewId && title) {
-                    navigateTo(viewId, title);
-                }
+                navigateTo(button.dataset.view, button.dataset.title);
             });
         });
 
-        // --- INITIAL RENDER ---
+        // --- INITIALIZATION ---
         document.addEventListener('DOMContentLoaded', () => {
              renderMessages();
-             // Set initial view correctly
+             loadVoices();
              document.getElementById('chat-view').classList.remove('hidden');
              document.getElementById('settings-view').classList.add('hidden');
+             speak(messages.find(m => m.sender === 'ai')?.text);
         });
 
     </script>
