@@ -177,9 +177,11 @@
         // --- Text-to-Speech ---
         function speakKurdish(text) {
             if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterterance(text);
+                // Corrected typo from SpeechSynthesisUtterterance to SpeechSynthesisUtterance
+                const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'ku'; // Standard tag for Kurdish
-                utterance.rate = 1.2; // Slightly faster
+                utterance.rate = 1.1; // Adjusted rate for clarity
+                utterance.pitch = 1.0; 
                 window.speechSynthesis.speak(utterance);
             } else {
                 console.log('Text-to-speech not supported in this browser.');
@@ -231,8 +233,8 @@
                 const aiMessage = { sender: 'ai', text: randomResponse };
                 messages.push(aiMessage);
                 renderMessages();
-                // We are not calling speakKurdish here to avoid automatic voice playback on every AI response.
-                // It can be re-enabled if desired.
+                // --- MODIFICATION: Speak the AI's response ---
+                speakKurdish(randomResponse);
             }, 800);
         }
 
