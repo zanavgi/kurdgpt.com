@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ku">
+<html lang="ku" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -110,7 +110,7 @@
             
             <!-- Chat View -->
             <div id="chat-view" class="app-view active flex-col">
-                <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4">
+                <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col">
                     <!-- Messages will be rendered here by JavaScript -->
                 </div>
                 <div class="p-2 bg-[var(--system-gray-1)]/80 backdrop-blur-md border-t border-[var(--system-gray-3)]">
@@ -170,39 +170,23 @@
         const messages = [
             {
                 sender: 'ai',
-                text: 'سڵاو! من Ai KurdCPTم، یاریدەدەری زیرەکی تۆ. لەلایەن ڕەوەند ئەی ئای دروستکراوم. چۆن دەتوانم یارمەتیت بدەم؟'
+                text: 'سڵاو! من Ai KurdCPTم، یاریدەدەری زیرەکی تۆ. لەلایەن زانا فاروق دروستکراوم. چۆن دەتوانم یارمەتیت بدەم؟'
             }
         ];
 
         // --- Text-to-Speech ---
         function speakKurdish(text) {
-            // The Web Speech API has limited support for Kurdish ('ku').
-            // This function will attempt to use it, but may fall back to a browser default.
-            // A fast speech rate is requested.
             if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'ku-IQ'; // Attempt to use Kurdish (Iraq)
-                utterance.rate = 1.3; // A bit faster than normal
-                
-                // Fallback voice selection if Kurdish is not available
-                let voices = window.speechSynthesis.getVoices();
-                let kurdishVoice = voices.find(voice => voice.lang === 'ku-IQ' || voice.lang === 'ku');
-                if (!kurdishVoice) {
-                   // A common fallback could be Arabic as it might be available on more systems
-                   kurdishVoice = voices.find(voice => voice.lang.startsWith('ar-'));
-                }
-                utterance.voice = kurdishVoice;
-
+                const utterance = new SpeechSynthesisUtterterance(text);
+                utterance.lang = 'ku'; // Standard tag for Kurdish
+                utterance.rate = 1.2; // Slightly faster
                 window.speechSynthesis.speak(utterance);
             } else {
                 console.log('Text-to-speech not supported in this browser.');
             }
         }
-        // Load voices initially (they load asynchronously)
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.onvoiceschanged = () => {
-                window.speechSynthesis.getVoices();
-            };
+         if ('speechSynthesis' in window && window.speechSynthesis.onvoiceschanged !== undefined) {
+            window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
         }
 
 
@@ -210,29 +194,36 @@
         function renderMessages() {
             chatMessagesContainer.innerHTML = '';
             messages.forEach(message => {
+                const bubbleWrapper = document.createElement('div');
+                bubbleWrapper.classList.add('w-full', 'flex');
+
                 const bubble = document.createElement('div');
                 bubble.classList.add('max-w-xs', 'md:max-w-md', 'p-3', 'rounded-2xl', 'break-words');
 
                 if (message.sender === 'user') {
-                    bubble.classList.add('bg-[var(--system-blue)]', 'text-white', 'self-end', 'ml-auto');
+                    bubbleWrapper.classList.add('justify-end');
+                    bubble.classList.add('bg-[var(--system-blue)]', 'text-white');
                     bubble.textContent = message.text;
                 } else {
-                    bubble.classList.add('bg-[var(--system-gray-4)]', 'text-black', 'self-start', 'mr-auto');
+                    bubbleWrapper.classList.add('justify-start');
+                    bubble.classList.add('bg-[var(--system-gray-4)]', 'text-black');
                     bubble.textContent = message.text;
                 }
-                chatMessagesContainer.appendChild(bubble);
+                bubbleWrapper.appendChild(bubble);
+                chatMessagesContainer.appendChild(bubbleWrapper);
             });
             // Auto-scroll to the latest message
             chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
         }
 
         // --- AI Response Simulation ---
-        function getAIResponse() {
+        function getAIResponse(userInput) {
             const responses = [
                 "زۆر باشە، تێگەیشتم.",
                 "ببوورە، من هێشتا لە قۆناغی فێرکردندام و ناتوانم وەڵامی ئاڵۆز بدەمەوە.",
-                "دەتوانیت پرسیارێکی تر بکەیت؟",
-                "سوپاس بۆ بەکارهێنانی Ai KurdCPT."
+                "دەتوانیت زیاتر ڕوونی بکەیتەوە؟",
+                "سوپاس بۆ بەکارهێنانی من.",
+                `باشە، تۆ باست لە "${userInput}" کرد.`
             ];
             const randomResponse = responses[Math.floor(Math.random() * responses.length)];
 
@@ -240,8 +231,9 @@
                 const aiMessage = { sender: 'ai', text: randomResponse };
                 messages.push(aiMessage);
                 renderMessages();
-                speakKurdish(aiMessage.text);
-            }, 1000);
+                // We are not calling speakKurdish here to avoid automatic voice playback on every AI response.
+                // It can be re-enabled if desired.
+            }, 800);
         }
 
         // --- Event Handlers ---
@@ -252,7 +244,7 @@
                 messages.push({ sender: 'user', text: userInput });
                 renderMessages();
                 messageInput.value = '';
-                getAIResponse();
+                getAIResponse(userInput); // Pass user input to the AI
             }
         });
 
@@ -266,14 +258,26 @@
             headerTitle.textContent = title;
 
             if (currentView && nextView) {
-                currentView.classList.add('slide-out-left');
+                // A more standard iOS-like transition
+                const isGoingForward = viewId === 'settings-view'; 
+                
+                currentView.style.transition = 'transform 0.35s cubic-bezier(0.4, 0.0, 0.2, 1)';
+                nextView.style.transition = 'transform 0.35s cubic-bezier(0.4, 0.0, 0.2, 1)';
+
                 nextView.classList.remove('hidden');
-                nextView.classList.add('active', 'slide-in-right');
+                nextView.style.transform = isGoingForward ? 'translateX(100%)' : 'translateX(-100%)';
+                
+                requestAnimationFrame(() => {
+                    currentView.style.transform = isGoingForward ? 'translateX(-100%)' : 'translateX(100%)';
+                    nextView.style.transform = 'translateX(0)';
+                });
 
                 setTimeout(() => {
-                    currentView.classList.remove('active', 'slide-out-left');
                     currentView.classList.add('hidden');
-                    nextView.classList.remove('slide-in-right');
+                    currentView.style.transform = '';
+                    nextView.style.transform = '';
+                    currentView.classList.remove('active');
+                    nextView.classList.add('active');
                 }, 350);
             }
             
@@ -290,6 +294,7 @@
             });
         }
 
+
         tabButtons.forEach(button => {
             button.addEventListener('click', () => {
                 const viewId = button.dataset.view;
@@ -299,12 +304,23 @@
                 }
             });
         });
+        
+        // --- Initial View Setup ---
+        function initializeViews() {
+            document.querySelectorAll('.app-view').forEach(view => {
+                if (view.id !== currentViewId) {
+                    view.classList.add('hidden');
+                } else {
+                    view.classList.add('active');
+                    view.classList.remove('hidden');
+                }
+            });
+        }
 
         // --- Initial Load ---
         document.addEventListener('DOMContentLoaded', () => {
+            initializeViews();
             renderMessages();
-            // Speak the initial welcome message
-            setTimeout(() => speakKurdish(messages[0].text), 500);
         });
     </script>
 </body>
